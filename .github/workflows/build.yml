@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_SIGNING: ${{ secrets.KEYSTORE_BASE64 != '' }}
 
     steps:
       - name: Checkout
@@ -29,7 +31,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
 
       - name: Decode signing keystore (only if secrets are configured)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_SIGNING == 'true' }}
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > tabdilgar-asnad/app/release.keystore
 
       - name: Build debug APK
@@ -37,10 +39,9 @@ jobs:
         run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Build release APK (signed, only if secrets are configured)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_SIGNING == 'true' }}
         working-directory: tabdilgar-asnad
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -53,7 +54,7 @@ jobs:
           path: tabdilgar-asnad/app/build/outputs/apk/debug/*.apk
 
       - name: Upload release APK
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        if: ${{ env.HAS_SIGNING == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: app-release
